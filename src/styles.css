@@ -132,6 +132,35 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Libre Baskerville", Georgia, serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-garamond: "EB Garamond", Georgia, serif;
+  --font-grotesk: "Montserrat", ui-sans-serif, sans-serif;
+  --color-ink: oklch(0.24 0.02 260);
+  --color-paper: oklch(0.995 0.003 90);
+  --shadow-paper: 0 1px 2px oklch(0 0 0 / 0.06), 0 24px 60px -20px oklch(0.3 0.05 260 / 0.35);
+}
+
+:root {
+  --background: oklch(0.965 0.008 250);
+  --foreground: oklch(0.22 0.025 262);
+  --card: oklch(1 0 0);
+  --primary: oklch(0.42 0.16 262);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --secondary: oklch(0.93 0.012 250);
+  --secondary-foreground: oklch(0.28 0.03 262);
+  --muted: oklch(0.94 0.01 250);
+  --muted-foreground: oklch(0.5 0.02 258);
+  --accent: oklch(0.9 0.03 258);
+  --accent-foreground: oklch(0.28 0.04 262);
+  --border: oklch(0.89 0.012 252);
+  --input: oklch(0.89 0.012 252);
+  --ring: oklch(0.42 0.16 262);
+  --radius: 0.75rem;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -140,5 +169,35 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .print-stage {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .print-area {
+    transform: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    break-inside: avoid;
   }
 }
