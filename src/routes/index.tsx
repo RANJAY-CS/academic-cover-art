@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,6 +55,13 @@ type Form = {
   showSession: boolean;
   showDate: boolean;
   showRule: boolean;
+  font: "template" | "serif" | "display" | "garamond" | "grotesk";
+  titleSize: number;
+  bodySize: number;
+  logoSize: number;
+  spacing: number;
+  pageInset: number;
+  detailsLayout: "columns" | "stacked";
 };
 
 const DEFAULTS: Form = {
@@ -80,6 +89,13 @@ const DEFAULTS: Form = {
   showSession: true,
   showDate: true,
   showRule: true,
+  font: "template",
+  titleSize: 58,
+  bodySize: 19,
+  logoSize: 112,
+  spacing: 100,
+  pageInset: 10,
+  detailsLayout: "columns",
 };
 
 const ACCENTS = ["#1a3fa0", "#0f766e", "#9d174d", "#b45309", "#3f3f46", "#7e22ce"];
@@ -143,19 +159,26 @@ function Index() {
   };
 
   const t = form.template;
-  const bodyFont =
-    t === "modern" ? "var(--font-grotesk)" : t === "elegant" ? "var(--font-garamond)" : "var(--font-serif)";
-  const titleFont =
-    t === "modern" ? "var(--font-grotesk)" : t === "elegant" ? "var(--font-display)" : "var(--font-serif)";
+  const fonts = {
+    serif: "var(--font-serif)",
+    display: "var(--font-display)",
+    garamond: "var(--font-garamond)",
+    grotesk: "var(--font-grotesk)",
+  };
+  const bodyFont = form.font !== "template" ? fonts[form.font] :
+    t === "modern" ? fonts.grotesk : t === "elegant" ? fonts.garamond : fonts.serif;
+  const titleFont = form.font !== "template" ? fonts[form.font] :
+    t === "modern" ? fonts.grotesk : t === "elegant" ? fonts.display : fonts.serif;
+  const gap = form.spacing / 100;
 
   const borderStyle: React.CSSProperties =
     form.border === "none"
       ? {}
       : form.border === "double"
-        ? { border: `3px double ${form.accent}`, padding: "10mm" }
+        ? { border: `3px double ${form.accent}`, padding: `${form.pageInset}mm` }
         : form.border === "thick"
-          ? { border: `6px solid ${form.accent}`, padding: "10mm" }
-          : { border: `1px solid ${form.accent}`, padding: "10mm" };
+          ? { border: `6px solid ${form.accent}`, padding: `${form.pageInset}mm` }
+          : { border: `1px solid ${form.accent}`, padding: `${form.pageInset}mm` };
 
   return (
     <main className="min-h-screen">
@@ -184,35 +207,37 @@ function Index() {
           <Panel title="Style">
             <div className="grid grid-cols-3 gap-2">
               {TEMPLATES.map((tpl) => (
-                <button
+                <Button
                   key={tpl.id}
+                  variant="outline"
                   onClick={() => set("template", tpl.id)}
-                  className={`rounded-lg border px-2 py-2 text-left transition-colors ${
+                  className={`h-auto min-w-0 flex-col items-start gap-0 px-2 py-2 text-left whitespace-normal ${
                     form.template === tpl.id
                       ? "border-primary bg-accent"
-                      : "border-border hover:bg-secondary"
+                      : ""
                   }`}
                 >
                   <span className="block text-sm font-semibold">{tpl.name}</span>
                   <span className="block text-[11px] text-muted-foreground">{tpl.hint}</span>
-                </button>
+                </Button>
               ))}
             </div>
             <div className="mt-4">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Border</Label>
               <div className="mt-2 grid grid-cols-4 gap-2">
                 {BORDERS.map((b) => (
-                  <button
+                  <Button
                     key={b.id}
+                    variant="outline"
                     onClick={() => set("border", b.id)}
-                    className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                    className={`h-8 min-w-0 px-1 text-xs ${
                       form.border === b.id
                         ? "border-primary bg-accent"
-                        : "border-border hover:bg-secondary"
+                        : ""
                     }`}
                   >
                     {b.name}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -222,12 +247,13 @@ function Index() {
               </Label>
               <div className="mt-2 flex items-center gap-2">
                 {ACCENTS.map((c) => (
-                  <button
+                  <Button
                     key={c}
+                    variant="ghost"
                     aria-label={`Accent ${c}`}
                     onClick={() => set("accent", c)}
                     style={{ background: c }}
-                    className={`size-7 rounded-full ring-offset-2 ring-offset-card transition ${
+                    className={`size-7 rounded-full p-0 ring-offset-2 ring-offset-card transition ${
                       form.accent === c ? "ring-2 ring-foreground" : ""
                     }`}
                   />
@@ -267,6 +293,39 @@ function Index() {
                 checked={form.uppercaseTitle}
                 onChange={(v) => set("uppercaseTitle", v)}
               />
+            </div>
+          </Panel>
+
+          <Panel title="Typography & spacing">
+            <div className="space-y-1.5">
+              <Label htmlFor="page-font" className="text-xs text-muted-foreground">Page font</Label>
+              <Select value={form.font} onValueChange={(v: Form["font"]) => set("font", v)}>
+                <SelectTrigger id="page-font"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="template">Follow template</SelectItem>
+                  <SelectItem value="serif">Classic serif</SelectItem>
+                  <SelectItem value="display">Display serif</SelectItem>
+                  <SelectItem value="garamond">Garamond</SelectItem>
+                  <SelectItem value="grotesk">Modern sans</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <RangeField label="Title size" value={form.titleSize} min={36} max={72} unit="px" onChange={(v) => set("titleSize", v)} />
+            <RangeField label="Details size" value={form.bodySize} min={15} max={23} unit="px" onChange={(v) => set("bodySize", v)} />
+            <RangeField label="Logo size" value={form.logoSize} min={60} max={160} unit="px" onChange={(v) => set("logoSize", v)} />
+            <RangeField label="Vertical spacing" value={form.spacing} min={65} max={135} unit="%" onChange={(v) => set("spacing", v)} />
+            <RangeField label="Border inset" value={form.pageInset} min={5} max={16} unit="mm" onChange={(v) => set("pageInset", v)} />
+          </Panel>
+
+          <Panel title="Submission layout">
+            <div className="grid grid-cols-2 gap-2">
+              {(["columns", "stacked"] as const).map((layout) => (
+                <Button key={layout} variant="outline" size="sm"
+                  className={form.detailsLayout === layout ? "border-primary bg-accent" : ""}
+                  onClick={() => set("detailsLayout", layout)}>
+                  {layout === "columns" ? "Side by side" : "Stacked"}
+                </Button>
+              ))}
             </div>
           </Panel>
 
@@ -333,7 +392,7 @@ function Index() {
           className="print-stage flex justify-center overflow-hidden rounded-xl bg-secondary/60 p-4"
         >
           <div
-            className="print-area shrink-0 bg-paper text-ink shadow-[var(--shadow-paper)]"
+              className="print-area box-border shrink-0 bg-paper text-ink shadow-[var(--shadow-paper)]"
             style={{
               width: 794,
               minHeight: 1123,
@@ -348,9 +407,9 @@ function Index() {
               style={{ ...borderStyle, minHeight: form.border === "none" ? undefined : "273mm" }}
               className="flex h-full flex-col"
             >
-              <div className="flex flex-1 flex-col items-center pt-6 text-center">
+               <div className="flex flex-1 flex-col items-center text-center" style={{ paddingTop: 24 * gap }}>
                 {form.showLogo && form.logo && (
-                  <img src={form.logo} alt="University logo" className="mb-5 max-h-28 object-contain" />
+                   <img src={form.logo} alt="University logo" className="object-contain" style={{ maxHeight: form.logoSize, maxWidth: form.logoSize, marginBottom: 20 * gap }} />
                 )}
 
                 <h2
@@ -366,13 +425,13 @@ function Index() {
                 </h2>
 
                 {form.department && (
-                  <p className="mt-5 text-[19px] uppercase tracking-wide">{form.department}</p>
+                   <p className="uppercase tracking-wide" style={{ marginTop: 20 * gap, fontSize: form.bodySize }}>{form.department}</p>
                 )}
 
                 {form.showSession && form.session && (
                   <p
-                    className="mt-12 text-[17px] font-semibold uppercase tracking-[0.12em]"
-                    style={{ color: form.accent, fontFamily: "var(--font-grotesk)" }}
+                     className="font-semibold uppercase tracking-[0.12em]"
+                     style={{ color: form.accent, fontFamily: bodyFont, marginTop: 48 * gap, fontSize: form.bodySize - 2 }}
                   >
                     {form.session}
                   </p>
@@ -380,20 +439,21 @@ function Index() {
 
                 {form.assignmentLabel && (
                   <p
-                    className="mt-6 text-[19px] uppercase tracking-wide"
-                    style={{ fontFamily: "var(--font-grotesk)" }}
+                     className="uppercase tracking-wide"
+                     style={{ fontFamily: bodyFont, marginTop: 24 * gap, fontSize: form.bodySize }}
                   >
                     {form.assignmentLabel}
                   </p>
                 )}
 
                 <p
-                  className="mt-3 leading-none"
+                   className="leading-none break-words max-w-full"
                   style={{
+                     marginTop: 12 * gap,
                     fontFamily: titleFont,
                     color: form.accent,
                     fontWeight: 700,
-                    fontSize: 58,
+                     fontSize: form.titleSize,
                     textTransform: form.uppercaseTitle ? "uppercase" : "none",
                   }}
                 >
@@ -402,8 +462,8 @@ function Index() {
 
                 {form.subject && (
                   <p
-                    className="mt-8 px-8 text-[23px] uppercase"
-                    style={{ fontFamily: "var(--font-grotesk)", fontWeight: 500 }}
+                     className="px-8 uppercase break-words max-w-full"
+                     style={{ fontFamily: bodyFont, fontWeight: 500, marginTop: 32 * gap, fontSize: form.bodySize + 4 }}
                   >
                     {form.subject}
                   </p>
@@ -411,16 +471,19 @@ function Index() {
               </div>
 
               <div className="mt-auto px-2 pb-2">
-                <div className="grid grid-cols-2 gap-8">
+                 <div className={form.detailsLayout === "columns" ? "grid grid-cols-2 gap-8" : "flex flex-col gap-8"}>
                   <Column
                     heading={form.toLabel}
                     accent={form.accent}
                     lines={[form.toName, form.toExtra]}
                     titleFont={titleFont}
+                     fontSize={form.bodySize}
                   />
                   <div
                     style={
-                      form.showRule ? { borderLeft: `1px solid ${form.accent}`, paddingLeft: 28 } : undefined
+                       form.showRule ? form.detailsLayout === "columns"
+                         ? { borderLeft: `1px solid ${form.accent}`, paddingLeft: 28 }
+                         : { borderTop: `1px solid ${form.accent}`, paddingTop: 24 } : undefined
                     }
                   >
                     <Column
@@ -428,12 +491,13 @@ function Index() {
                       accent={form.accent}
                       lines={[form.byName, form.byClass, form.byRoll, form.byExtra]}
                       titleFont={titleFont}
+                       fontSize={form.bodySize}
                     />
                   </div>
                 </div>
 
                 {form.showDate && form.date && (
-                  <p className="mt-16 text-center text-[18px]">{form.date}</p>
+                   <p className="text-center" style={{ marginTop: 64 * gap, fontSize: form.bodySize - 1 }}>{form.date}</p>
                 )}
               </div>
             </div>
@@ -449,26 +513,47 @@ function Column({
   lines,
   accent,
   titleFont,
+  fontSize,
 }: {
   heading: string;
   lines: string[];
   accent: string;
   titleFont: string;
+  fontSize: number;
 }) {
   return (
     <div className="text-left">
       <p
-        className="text-[20px] font-bold uppercase"
-        style={{ color: accent, fontFamily: titleFont }}
+         className="font-bold uppercase"
+         style={{ color: accent, fontFamily: titleFont, fontSize: fontSize + 1 }}
       >
         {heading}
       </p>
       <div className="mt-1 mb-3 h-px w-4/5" style={{ background: accent }} />
-      <div className="space-y-2 text-[19px]">
+       <div className="space-y-2 break-words" style={{ fontSize }}>
         {lines.filter(Boolean).map((l) => (
           <p key={l}>{l}</p>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RangeField({ label, value, min, max, unit, onChange }: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  unit: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-2 py-1">
+      <div className="flex justify-between gap-3 text-xs">
+        <Label>{label}</Label>
+        <span className="tabular-nums text-muted-foreground">{value}{unit}</span>
+      </div>
+      <Slider aria-label={label} min={min} max={max} step={1} value={[value]} onValueChange={([next]) => { if (next !== undefined) onChange(next); }} />
     </div>
   );
 }
