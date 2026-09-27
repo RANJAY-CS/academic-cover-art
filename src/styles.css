@@ -212,3 +212,21 @@
   .resize-handle { display: none !important; }
   .print-area { height: 297mm !important; }
 }
+
+@media print {
+  main, main > div {
+    display: block !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print-stage {
+    width: 210mm !important;
+    height: 297mm !important;
+    border-radius: 0 !important;
+  }
+  .print-area { overflow: hidden !important; }
+}
