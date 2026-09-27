@@ -1,0 +1,3 @@
+- [x] Add movable, resizable text, shapes, lines, and uploaded images to the A4 cover.
+- [x] Add per-item typography, colour, opacity, rotation, alignment, position, duplication, and layer order.
+- [ ] Verify editing and printed A4 output in the running preview.

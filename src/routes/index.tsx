@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Printer, RotateCcw, Upload, X } from "lucide-react";
+import { Printer, RotateCcw, Upload, X, Type, Square, Circle, Minus, ImagePlus, Copy, Trash2, ArrowUp, ArrowDown, Bold, Italic, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,16 @@ export const Route = createFileRoute("/")({
   }),
   component: Index,
 });
+
+type CanvasItem = {
+  id: string;
+  type: "text" | "rectangle" | "circle" | "line" | "image";
+  x: number; y: number; w: number; h: number;
+  text: string; src: string; color: string;
+  fontSize: number; font: "serif" | "display" | "garamond" | "grotesk";
+  bold: boolean; italic: boolean; align: "left" | "center" | "right";
+  opacity: number; rotation: number;
+};
 
 type Form = {
   university: string;
@@ -62,6 +73,8 @@ type Form = {
   spacing: number;
   pageInset: number;
   detailsLayout: "columns" | "stacked";
+  pageColor: string;
+  items: CanvasItem[];
 };
 
 const DEFAULTS: Form = {
@@ -96,6 +109,8 @@ const DEFAULTS: Form = {
   spacing: 100,
   pageInset: 10,
   detailsLayout: "columns",
+  pageColor: "#ffffff",
+  items: [],
 };
 
 const ACCENTS = ["#1a3fa0", "#0f766e", "#9d174d", "#b45309", "#3f3f46", "#7e22ce"];
@@ -120,6 +135,10 @@ function Index() {
   const [scale, setScale] = useState(1);
   const stageRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const dragRef = useRef<{ id: string; mode: "move" | "resize"; startX: number; startY: number; item: CanvasItem } | null>(null);
+  const selected = (form.items || []).find((item) => item.id === selectedId);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -155,6 +174,66 @@ function Index() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => set("logo", String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const addItem = (type: CanvasItem["type"], src = "") => {
+    const item: CanvasItem = {
+      id: crypto.randomUUID(), type, x: 270, y: Math.min(800, 610 + ((form.items || []).length % 5) * 35),
+      w: type === "line" ? 250 : type === "image" ? 180 : type === "text" ? 280 : 150,
+      h: type === "line" ? 4 : type === "image" ? 150 : type === "text" ? 90 : 100,
+      text: type === "text" ? "Your text here" : "", src, color: form.accent,
+      fontSize: 32, font: "grotesk", bold: false, italic: false, align: "center",
+      opacity: 100, rotation: 0,
+    };
+    setForm((f) => ({ ...f, items: [...(f.items || []), item] }));
+    setSelectedId(item.id);
+  };
+  const updateItem = (id: string, changes: Partial<CanvasItem>) =>
+    setForm((f) => ({ ...f, items: (f.items || []).map((item) => item.id === id ? { ...item, ...changes } : item) }));
+  const removeItem = (id: string) => {
+    setForm((f) => ({ ...f, items: (f.items || []).filter((item) => item.id !== id) }));
+    setSelectedId(null);
+  };
+  const duplicateItem = (item: CanvasItem) => {
+    const copy = { ...item, id: crypto.randomUUID(), x: Math.min(794 - item.w, item.x + 24), y: Math.min(1123 - item.h, item.y + 24) };
+    setForm((f) => ({ ...f, items: [...(f.items || []), copy] }));
+    setSelectedId(copy.id);
+  };
+  const shiftItem = (id: string, direction: number) => setForm((f) => {
+    const items = [...(f.items || [])];
+    const index = items.findIndex((item) => item.id === id);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= items.length) return f;
+    [items[index], items[next]] = [items[next], items[index]];
+    return { ...f, items };
+  });
+  const startDrag = (e: React.PointerEvent, item: CanvasItem, mode: "move" | "resize") => {
+    e.preventDefault(); e.stopPropagation();
+    setSelectedId(item.id);
+    dragRef.current = { id: item.id, mode, startX: e.clientX, startY: e.clientY, item: { ...item } };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onDrag = (e: React.PointerEvent) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = (e.clientX - drag.startX) / scale;
+    const dy = (e.clientY - drag.startY) / scale;
+    if (drag.mode === "move") updateItem(drag.id, {
+      x: Math.max(0, Math.min(794 - drag.item.w, Math.round(drag.item.x + dx))),
+      y: Math.max(0, Math.min(1123 - drag.item.h, Math.round(drag.item.y + dy))),
+    });
+    else {
+      updateItem(drag.id, {
+        w: Math.max(24, Math.min(794 - drag.item.x, Math.round(drag.item.w + dx))),
+        h: Math.max(drag.item.type === "line" ? 2 : 24, Math.min(1123 - drag.item.y, Math.round(drag.item.h + dy))),
+      });
+    }
+  };
+  const onImage = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => addItem("image", String(reader.result));
     reader.readAsDataURL(file);
   };
 
@@ -204,6 +283,69 @@ function Index() {
       <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[380px_1fr]">
         {/* Controls */}
         <section className="no-print space-y-6">
+           <Panel title="Add to page">
+             <div className="grid grid-cols-5 gap-2">
+               {([
+                 ["text", Type, "Text"], ["rectangle", Square, "Box"],
+                 ["circle", Circle, "Circle"], ["line", Minus, "Line"],
+               ] as const).map(([type, Icon, label]) => (
+                 <Button key={type} variant="outline" title={`Add ${label.toLowerCase()}`} aria-label={`Add ${label.toLowerCase()}`}
+                   className="h-14 flex-col gap-1 text-[10px]" onClick={() => addItem(type)}>
+                   <Icon className="size-4" />{label}
+                 </Button>
+               ))}
+               <Button variant="outline" title="Add image" aria-label="Add image" className="h-14 flex-col gap-1 text-[10px]" onClick={() => imageRef.current?.click()}>
+                 <ImagePlus className="size-4" />Image
+               </Button>
+               <input ref={imageRef} className="hidden" type="file" accept="image/*" onChange={(e) => { onImage(e.target.files?.[0]); e.target.value = ""; }} />
+             </div>
+             <p className="text-xs text-muted-foreground">Select and drag an item on the page. Pull its corner to resize.</p>
+           </Panel>
+
+           {selected && <Panel title="Selected item">
+             <div className="flex items-center justify-between gap-2">
+               <span className="text-sm font-medium capitalize">{selected.type}</span>
+               <div className="flex gap-1">
+                 <Button size="icon" variant="ghost" title="Move backward" aria-label="Move backward" onClick={() => shiftItem(selected.id, -1)}><ArrowDown className="size-4" /></Button>
+                 <Button size="icon" variant="ghost" title="Move forward" aria-label="Move forward" onClick={() => shiftItem(selected.id, 1)}><ArrowUp className="size-4" /></Button>
+                 <Button size="icon" variant="ghost" title="Duplicate" aria-label="Duplicate" onClick={() => duplicateItem(selected)}><Copy className="size-4" /></Button>
+                 <Button size="icon" variant="ghost" title="Delete" aria-label="Delete" onClick={() => removeItem(selected.id)}><Trash2 className="size-4" /></Button>
+               </div>
+             </div>
+             {selected.type === "text" && <>
+               <div className="space-y-1"><Label htmlFor="item-text">Text</Label><Textarea id="item-text" value={selected.text} rows={3} onChange={(e) => updateItem(selected.id, { text: e.target.value })} /></div>
+               <div className="space-y-1"><Label htmlFor="item-font">Font</Label>
+                 <Select value={selected.font} onValueChange={(v: CanvasItem["font"]) => updateItem(selected.id, { font: v })}>
+                   <SelectTrigger id="item-font"><SelectValue /></SelectTrigger><SelectContent>
+                     <SelectItem value="grotesk">Modern sans</SelectItem><SelectItem value="serif">Classic serif</SelectItem><SelectItem value="display">Display serif</SelectItem><SelectItem value="garamond">Garamond</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
+               <RangeField label="Font size" value={selected.fontSize} min={10} max={110} unit="px" onChange={(v) => updateItem(selected.id, { fontSize: v })} />
+               <div className="flex gap-1">
+                 <Button size="icon" variant={selected.bold ? "default" : "outline"} title="Bold" aria-label="Bold" onClick={() => updateItem(selected.id, { bold: !selected.bold })}><Bold className="size-4" /></Button>
+                 <Button size="icon" variant={selected.italic ? "default" : "outline"} title="Italic" aria-label="Italic" onClick={() => updateItem(selected.id, { italic: !selected.italic })}><Italic className="size-4" /></Button>
+                 {([ ["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight] ] as const).map(([align, Icon]) =>
+                   <Button key={align} size="icon" variant={selected.align === align ? "default" : "outline"} title={`Align ${align}`} aria-label={`Align ${align}`} onClick={() => updateItem(selected.id, { align })}><Icon className="size-4" /></Button>)}
+               </div>
+             </>}
+             {selected.type !== "image" && <div className="flex items-center justify-between gap-3">
+               <Label htmlFor="item-color">Colour</Label><input id="item-color" type="color" value={selected.color} onChange={(e) => updateItem(selected.id, { color: e.target.value })} className="h-9 w-14 cursor-pointer" />
+             </div>}
+             <RangeField label="Opacity" value={selected.opacity} min={10} max={100} unit="%" onChange={(v) => updateItem(selected.id, { opacity: v })} />
+             <RangeField label="Rotation" value={selected.rotation} min={-180} max={180} unit="°" onChange={(v) => updateItem(selected.id, { rotation: v })} />
+             <div className="grid grid-cols-2 gap-2">
+               <Field label="X position" value={String(selected.x)} type="number" onChange={(v) => updateItem(selected.id, { x: Math.max(0, Math.min(794 - selected.w, Number(v) || 0)) })} />
+               <Field label="Y position" value={String(selected.y)} type="number" onChange={(v) => updateItem(selected.id, { y: Math.max(0, Math.min(1123 - selected.h, Number(v) || 0)) })} />
+             </div>
+           </Panel>}
+
+           <Panel title="Page background">
+             <div className="flex items-center justify-between gap-3"><Label htmlFor="page-color">Paper colour</Label>
+               <div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => set("pageColor", "#ffffff")}>White</Button><input id="page-color" aria-label="Paper colour" type="color" value={form.pageColor || "#ffffff"} onChange={(e) => set("pageColor", e.target.value)} className="h-9 w-12 cursor-pointer" /></div>
+             </div>
+           </Panel>
+
           <Panel title="Style">
             <div className="grid grid-cols-3 gap-2">
               {TEMPLATES.map((tpl) => (
@@ -392,16 +534,18 @@ function Index() {
           className="print-stage flex justify-center overflow-hidden rounded-xl bg-secondary/60 p-4"
         >
           <div
-              className="print-area box-border shrink-0 bg-paper text-ink shadow-[var(--shadow-paper)]"
+              className="print-area relative box-border shrink-0 overflow-hidden bg-paper text-ink shadow-[var(--shadow-paper)]"
             style={{
               width: 794,
-              minHeight: 1123,
+              height: 1123,
+              backgroundColor: form.pageColor || "#ffffff",
               transform: `scale(${scale})`,
               transformOrigin: "top center",
               marginBottom: (scale - 1) * 1123,
               padding: form.border === "none" ? "18mm" : "8mm",
               fontFamily: bodyFont,
             }}
+            onPointerDown={() => setSelectedId(null)}
           >
             <div
               style={{ ...borderStyle, minHeight: form.border === "none" ? undefined : "273mm" }}
@@ -501,6 +645,21 @@ function Index() {
                 )}
               </div>
             </div>
+            {(form.items || []).map((item) => (
+              <div key={item.id} aria-label={`${item.type} item`} onPointerDown={(e) => startDrag(e, item, "move")}
+                onPointerMove={onDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }}
+                className={`absolute touch-none select-none ${selectedId === item.id ? "editor-selected" : ""}`}
+                style={{ left: item.x, top: item.y, width: item.w, height: item.h, opacity: item.opacity / 100, transform: `rotate(${item.rotation}deg)`, cursor: "move", zIndex: 5 }}>
+                {item.type === "text" && <div className="h-full w-full overflow-hidden whitespace-pre-wrap break-words leading-tight"
+                  style={{ fontSize: item.fontSize, fontFamily: fonts[item.font], fontWeight: item.bold ? 700 : 400, fontStyle: item.italic ? "italic" : "normal", textAlign: item.align, color: item.color }}>{item.text}</div>}
+                {item.type === "rectangle" && <div className="h-full w-full" style={{ backgroundColor: item.color }} />}
+                {item.type === "circle" && <div className="h-full w-full rounded-full" style={{ backgroundColor: item.color }} />}
+                {item.type === "line" && <div className="h-full w-full" style={{ backgroundColor: item.color }} />}
+                {item.type === "image" && <img src={item.src} alt="Added design" draggable={false} className="h-full w-full object-contain" />}
+                {selectedId === item.id && <div aria-label="Resize item" title="Drag to resize" className="resize-handle no-print absolute -bottom-2 -right-2 size-5 cursor-nwse-resize rounded-sm border-2 border-primary-foreground bg-primary"
+                  onPointerDown={(e) => startDrag(e, item, "resize")} onPointerMove={onDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} />}
+              </div>
+            ))}
           </div>
         </section>
       </div>
@@ -573,15 +732,17 @@ function Field({
   label,
   value,
   onChange,
+  type = "text",
 }: {
   label: string;
   value: string;
+  type?: string;
   onChange: (v: string) => void;
 }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
