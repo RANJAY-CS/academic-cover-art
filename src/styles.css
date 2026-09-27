@@ -201,3 +201,14 @@
     break-inside: avoid;
   }
 }
+
+.editor-selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media print {
+  .editor-selected { outline: none !important; }
+  .resize-handle { display: none !important; }
+  .print-area { height: 297mm !important; }
+}
