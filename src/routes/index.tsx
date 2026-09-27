@@ -179,7 +179,7 @@ function Index() {
 
   const addItem = (type: CanvasItem["type"], src = "") => {
     const item: CanvasItem = {
-      id: crypto.randomUUID(), type, x: 270, y: 500,
+      id: crypto.randomUUID(), type, x: 270, y: Math.min(800, 610 + ((form.items || []).length % 5) * 35),
       w: type === "line" ? 250 : type === "image" ? 180 : type === "text" ? 280 : 150,
       h: type === "line" ? 4 : type === "image" ? 150 : type === "text" ? 90 : 100,
       text: type === "text" ? "Your text here" : "", src, color: form.accent,
